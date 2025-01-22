@@ -2,20 +2,19 @@
 
 import { useEffect, useState } from "react"
 import { Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Card } from "../components/ui/card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
+import { Badge } from "../components/ui/badge"
 import { db } from "../lib/firebase"
 import { collection, deleteDoc, doc, onSnapshot, orderBy, query } from "firebase/firestore"
-import type { NotificationData } from "../lib/getNotifications"
 
 export function NotificationsDashboard({
   initialNotifications,
 }: {
-  initialNotifications: NotificationData[]
+  initialNotifications: any[]
 }) {
-  const [notifications, setNotifications] = useState<NotificationData[]>(initialNotifications)
+  const [notifications, setNotifications] = useState<any[]>(initialNotifications)
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"))
@@ -24,7 +23,7 @@ export function NotificationsDashboard({
       const newNotifications = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as NotificationData[]
+      })) as any[]
       setNotifications(newNotifications)
     })
 

